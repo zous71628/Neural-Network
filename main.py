@@ -11,37 +11,31 @@ def sigmoid(t: float) -> float:
 
 
 def neuron_output(weights: Vector, inputs: Vector) -> float:
-    # bias 偏差項已包含在內 weight之中， inputs也有偏差項相應元素，其值為1
     return sigmoid(dot(weights, inputs))
 
 
 def feed_forward(neural_network: List[List[Vector]],
                  input_vector: Vector) -> List[Vector]:
-    """
-    把輸入向量送進神經網路，送回所有層(而不是最後一層)的輸出
-    """
+
     outputs: List[Vector] = []
 
     for layer in neural_network:
-        input_with_bias = input_vector + [1]  # 添加一個常數偏差輸入項
-        output = [neuron_output(neuron, input_with_bias)  # 計算輸出
-                  for neuron in layer]  # 針對每個神經元
-        outputs.append(output)  # 把結果添加到輸入之中
+        input_with_bias = input_vector + [1]
+        output = [neuron_output(neuron, input_with_bias)
+                  for neuron in layer]
+        outputs.append(output)
 
-        # 這一層的輸出就是下一層的輸入
         input_vector = output
 
     return outputs
 
 
-xor_network = [  # hidden layer
-    [[20., 20, -30],  # 'and' neuron
-     [20., 20, -10]],  # 'or'  neuron
-    # output layer
-    [[-60., 60, -30]]]  # '2nd input but not 1st input' neuron
+xor_network = [
+    [[20., 20, -30],
+     [20., 20, -10]],
+    [[-60., 60, -30]]]
 
-# feed_forward returns the outputs of all layers, so the [-1] gets the
-# final output, and the [0] gets the value out of the resulting vector
+
 assert 0.000 < feed_forward(xor_network, [0, 0])[-1][0] < 0.001
 assert 0.999 < feed_forward(xor_network, [1, 0])[-1][0] < 1.000
 assert 0.999 < feed_forward(xor_network, [0, 1])[-1][0] < 1.000
@@ -51,42 +45,24 @@ assert 0.000 < feed_forward(xor_network, [1, 1])[-1][0] < 0.001
 def sqerror_gradients(network: List[List[Vector]],
                       input_vector: Vector,
                       target_vector: Vector) -> List[List[Vector]]:
-    """
-    Given a neural network, an input vector, and a target vector,
-    make a prediction and compute the gradient of the squared error
-    loss with respect to the neuron weights.
-    """
-    # forward pass
+
     hidden_outputs, outputs = feed_forward(network, input_vector)
 
-    # gradients with respect to output neuron pre-activation outputs
     output_deltas = [output * (1 - output) * (output - target)
                      for output, target in zip(outputs, target_vector)]
 
-    # gradients with respect to output neuron weights
     output_grads = [[output_deltas[i] * hidden_output
                      for hidden_output in hidden_outputs + [1]]
                     for i, output_neuron in enumerate(network[-1])]
 
-    # gradients with respect to hidden neuron pre-activation outputs
     hidden_deltas = [hidden_output * (1 - hidden_output) *
                      dot(output_deltas, [n[i] for n in network[-1]])
                      for i, hidden_output in enumerate(hidden_outputs)]
 
-    # gradients with respect to hidden neuron weights
     hidden_grads = [[hidden_deltas[i] * input for input in input_vector + [1]]
                     for i, hidden_neuron in enumerate(network[0])]
 
     return [hidden_grads, output_grads]
-
-
-[  # hidden layer
-    [[7, 7, -3],  # computes OR
-     [5, 5, -8]],  # computes AND
-    # output layer
-    [[11, -12, -5]]  # computes "first but not second"
-]
-
 
 def fizz_buzz_encode(x: int) -> Vector:
     if x % 15 == 0:
@@ -124,28 +100,26 @@ assert binary_encode(999) == [1, 1, 1, 0, 0, 1, 1, 1, 1, 1]
 
 
 def argmax(xs: list) -> int:
-    """Returns the index of the largest value"""
+
     return max(range(len(xs)), key=lambda i: xs[i])
 
 
-assert argmax([0, -1]) == 0  # items[0] is largest
-assert argmax([-1, 0]) == 1  # items[1] is largest
-assert argmax([-1, 10, 5, 20, -3]) == 3  # items[3] is largest
+assert argmax([0, -1]) ==0
+assert argmax([-1, 0]) == 1
+assert argmax([-1, 10, 5, 20, -3]) == 3
 
 
 def main():
     random.seed(0)
 
-    # training data
     xs = [[0., 0], [0., 1], [1., 0], [1., 1]]
     ys = [[0.], [1.], [1.], [0.]]
 
-    # start with random weights
-    network = [  # hidden layer: 2 inputs -> 2 outputs
-        [[random.random() for _ in range(2 + 1)],  # 1st hidden neuron
-         [random.random() for _ in range(2 + 1)]],  # 2nd hidden neuron
-        # output layer: 2 inputs -> 1 output
-        [[random.random() for _ in range(2 + 1)]]  # 1st output neuron
+
+    network = [
+        [[random.random() for _ in range(2 + 1)],
+         [random.random() for _ in range(2 + 1)]],
+        [[random.random() for _ in range(2 + 1)]]
     ]
 
     learning_rate = 1.0
@@ -154,12 +128,10 @@ def main():
         for x, y in zip(xs, ys):
             gradients = sqerror_gradients(network, x, y)
 
-            # Take a gradient step for each neuron in each layer
             network = [[gradient_step(neuron, grad, -learning_rate)
                         for neuron, grad in zip(layer, layer_grad)]
                        for layer, layer_grad in zip(network, gradients)]
 
-    # check that it learned XOR
     assert feed_forward(network, [0, 0])[-1][0] < 0.01
     assert feed_forward(network, [0, 1])[-1][0] > 0.99
     assert feed_forward(network, [1, 0])[-1][0] > 0.99
@@ -171,10 +143,7 @@ def main():
     NUM_HIDDEN = 25
 
     network = [
-        # hidden layer: 10 inputs -> NUM_HIDDEN outputs
         [[random.random() for _ in range(10 + 1)] for _ in range(NUM_HIDDEN)],
-
-        # output_layer: NUM_HIDDEN inputs -> 4 outputs
         [[random.random() for _ in range(NUM_HIDDEN + 1)] for _ in range(4)]
     ]
 
@@ -188,8 +157,6 @@ def main():
                 predicted = feed_forward(network, x)[-1]
                 epoch_loss += squared_distance(predicted, y)
                 gradients = sqerror_gradients(network, x, y)
-
-                # Take a gradient step for each neuron in each layer
                 network = [[gradient_step(neuron, grad, -learning_rate)
                             for neuron, grad in zip(layer, layer_grad)]
                            for layer, layer_grad in zip(network, gradients)]
